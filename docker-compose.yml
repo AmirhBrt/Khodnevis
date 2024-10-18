@@ -12,6 +12,7 @@ services:
       - .:/app
     depends_on:
       - db
+      - redis
 
   db:
     image: docker.arvancloud.ir/postgres:15.1-alpine
@@ -25,5 +26,33 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: docker.arvancloud.ir/redis:7.0
+    command: --appendonly yes
+    restart: always
+    volumes:
+      - redis_data:/data
+    ports:
+      - "8184:6379"
+
+  celery:
+    build: .
+    command: celery -A _base worker --loglevel=info
+    volumes:
+      - .:/app
+    links:
+      - redis
+
+  beat:
+    build: .
+    command: celery -A _base beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+      - celery
+
 volumes:
   postgres_data:
+  redis_data:

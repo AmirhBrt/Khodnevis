@@ -1,6 +1,7 @@
 from django.db.models import Avg
 from rest_framework import serializers
 
+from utils.redis import default_redis, default_pipeline
 from contents.models import Content, Rating
 
 
@@ -13,18 +14,22 @@ class ContentSerializer(serializers.ModelSerializer):
         fields = ['title', 'description', 'author', 'average_score', 'ratings']
 
     def get_average_score(self, obj):
+        if average_score := default_redis.get(f'contents:average_score:{obj.pk}'):
+            return float(average_score.decode())
         average_score = Rating.objects.filter(content=obj).aggregate(avg=Avg('score'))['avg'] or 0
+        default_pipeline.set(f'contents:average_score:{obj.pk}', str(average_score))
+        default_pipeline.execute()
         return average_score
 
     def get_ratings(self, obj):
         ratings = Rating.objects.filter(content=obj)
         return RatingSerializer(ratings, many=True).data
 
-class ContentListSerializer(ContentSerializer):
 
+class ContentListSerializer(ContentSerializer):
     class Meta:
         model = Content
-        fields = ['id', 'title', 'author', 'average_score',]
+        fields = ['id', 'title', 'author', 'average_score', ]
 
 
 class RatingSerializer(serializers.ModelSerializer):
