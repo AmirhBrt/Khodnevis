@@ -7,11 +7,20 @@ from contents.models import Content, Rating
 
 class ContentSerializer(serializers.ModelSerializer):
     average_score = serializers.SerializerMethodField()
+    ratings_count = serializers.SerializerMethodField()
     ratings = serializers.SerializerMethodField()
 
     class Meta:
         model = Content
         fields = ['title', 'description', 'author', 'average_score', 'ratings']
+
+    def get_ratings_count(self, obj):
+        if ratings_count := default_redis.get(f'contents:ratings_count:{obj.pk}'):
+            return int(ratings_count.decode())
+        ratings_count = Rating.objects.filter(content=obj).count()
+        default_pipeline.set(f'contents:ratings_count:{obj.pk}', ratings_count)
+        default_pipeline.execute()
+        return ratings_count
 
     def get_average_score(self, obj):
         if average_score := default_redis.get(f'contents:average_score:{obj.pk}'):
