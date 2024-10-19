@@ -12,7 +12,7 @@ Khodnevis is a Django-based project that provides content and rating management 
 
 ## Features
 - Content management: Create, list, update, and delete content items.
-- Rating system: Rate content and asynchronously produce the rating to Kafka.
+- Rating system: Rate content based on user experience.
 - User authentication and management.
 - Asynchronous tasks using Celery.
 - Redis integration for caching.
@@ -36,8 +36,7 @@ Khodnevis is a Django-based project that provides content and rating management 
 
 ### Rating API
 - **List all ratings**: `GET /api/ratings/`
-- **Create a rating**: `POST /api/ratings/`  
-  When a rating is created, it is asynchronously sent to Kafka for further processing.
+- **Create a rating**: `POST /api/ratings/`
 - **Retrieve a single rating**: `GET /api/ratings/{id}/`
 - **Update a rating**: `PUT /api/ratings/{id}/`
 - **Delete a rating**: `DELETE /api/ratings/{id}/`
@@ -55,7 +54,7 @@ Django REST Framework (DRF) uses **ViewSets** to handle common operations like l
   - The `ContentViewSet` automatically handles the creation, listing, and updating of content objects. It uses the appropriate serializer based on the request type (list or detail view).
 
 - **RatingViewSet**:
-  - The `RatingViewSet` manages the creation and updating of ratings. When a new rating is submitted, instead of saving it immediately, the data is produced to a Kafka topic for asynchronous processing. This approach decouples the task of storing ratings, improving scalability and responsiveness of the application.
+  - The `RatingViewSet` manages the creation and updating of ratings. When a new rating is submitted, we save the ratings instantly. For further developments, we can add a Kafka producer to save the ratings asynchronously.
 
 ### Serializers
 **Serializers** in DRF are responsible for transforming complex data types (like Django models) into JSON or other content types that can be rendered into a response. They also handle the deserialization of input data into Django model instances.
@@ -78,7 +77,7 @@ Redis is used in this project for **caching** and **asynchronous task management
 
 ## Celery Tasks
 
-Celery is used for background task processing. It offloads time-consuming operations (like computing averages, or handling messages from Kafka) from the main Django application to background workers, ensuring the application remains responsive.
+Celery is used for background task processing. It offloads time-consuming operations (like computing averages) from the main Django application to background workers, ensuring the application remains responsive.
 
 ### Example Celery Task: Calculating Average Rating
 - When the average rating for content is calculated, the result is stored in Redis for quick access in future API requests.
